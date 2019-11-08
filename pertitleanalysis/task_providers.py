@@ -213,7 +213,7 @@ class Metric(Task):
         else:
             raise ValueError('Cannot access the file: {}'.format(ref_file_path))
 
-        available_metrics = ['ssim', 'psnr']
+        available_metrics = ['ssim', 'psnr', 'libvmaf']
         self.metric = str(metric).strip().lower()
         if self.metric not in available_metrics:
             raise ValueError('Available metrics are "ssim" and "psnr", does not include: {}'.format(metric))
@@ -222,11 +222,15 @@ class Metric(Task):
 
     def execute(self):
         """Using FFmpeg to process metric assessments"""
+        if str(self.metric) != 'libvmaf':
+            _filter = '[0]scale='+str(self.ref_width)+':'+str(self.ref_height)+'[scaled];[scaled][1]'+str(self.metric)+'=stats_file=-'
+        else:
+            _filter = '[0]scale='+str(self.ref_width)+':'+str(self.ref_height)+'[scaled];[scaled][1]'+str(self.metric)
         command = ['ffmpeg',
                 '-hide_banner',
                 '-i', self.input_file_path,
                 '-i', self.ref_file_path,
-                '-lavfi', '[0]scale='+str(self.ref_width)+':'+str(self.ref_height)+'[scaled];[scaled][1]'+str(self.metric)+'=stats_file=-',
+                '-lavfi', _filter,
                 '-f', 'null', '-']
         Task.execute(self, command)
 
@@ -235,10 +239,14 @@ class Metric(Task):
             data = self.subprocess_err.splitlines()
             for line in data:
                 line = str(line)
+                if isinstance(line, bytes):
+                    line = str(line, 'utf-8')
                 if 'Parsed_ssim' in line:
                     self.output_value = float(line.split('All:')[1].split('(')[0].strip())
                 elif 'Parsed_psnr' in line:
                     self.output_value = float(line.split('average:')[1].split('min:')[0].strip())
+                elif 'VMAF score' in line:
+                    self.output_value = float(line.split('VMAF score:')[-1].strip("'"))
 
         except:
             # TODO: error management
