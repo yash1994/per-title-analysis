@@ -51,7 +51,12 @@ This is package requires at least Python 3.4.
 
 You need to have ffmpeg and ffprobe installed on the host running the script.
 
+For `libvmaf` support install it with the help of [official documentation](https://github.com/Netflix/vmaf/blob/master/resource/doc/libvmaf.md). And build ffmpeg from source with following commands.
 
+```
+./configure --enable-libvmaf --enable-version3
+make install
+```
 ## Example:
 This is an example using the CRF Analyzer method.
 
